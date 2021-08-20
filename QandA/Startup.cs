@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using DbUp;
 using System.Reflection;
+using QandA.Data;
 
 namespace QandA
 {
@@ -42,12 +43,14 @@ namespace QandA
             {
                 upgrader.PerformUpgrade();
             }
-
+            // Page 288
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "QandA", Version = "v1" });
             });
+            
+            services.AddScoped<IDataRepository, DataRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
