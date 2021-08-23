@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using QandA.Data.Models;
+using static Dapper.SqlMapper;
 
 namespace QandA.Data
 {
@@ -41,24 +42,54 @@ namespace QandA.Data
             }
         }
 
+        public IEnumerable<QuestionGetManyResponse> GetQuestionsWithAnswers()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                string sql = @"EXEC dbo.Question_GetMany_WithAnswers";
+
+                var questionDictionary = new Dictionary<int, QuestionGetManyResponse>();
+                return connection
+                    .Query<QuestionGetManyResponse, AnswerGetResponse, QuestionGetManyResponse>(
+                    sql, map: (q, a) =>
+                    {
+                        if (!questionDictionary.TryGetValue(
+                            q.QuestionId, out QuestionGetManyResponse question))
+                        {
+                            question = q;
+                            question.Answers = new List<AnswerGetResponse>();
+                            questionDictionary.Add(question.QuestionId, question);
+                        }
+                        question.Answers.Add(a);
+                        return question;
+                    },
+                    splitOn: "QuestionId"
+                    )
+                    .Distinct()
+                    .ToList();
+            }
+        }
+
         public QuestionGetSingleResponse GetQuestion(int questionId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                string sql = @"EXEC dbo.Question_GetSingle @QuestionId";
-                var question = connection.QueryFirstOrDefault<QuestionGetSingleResponse>(sql, new
-                {
-                    QuestionId = questionId
-                });
+                string sql = @"EXEC dbo.Question_GetSingle @QuestionId; 
+                               EXEC dbo.Answer_Get_ByQuestionId @QuestionId";
 
-                if (question != null)
+                using (GridReader results = connection.QueryMultiple(sql, new 
+                { QuestionId = questionId }))
                 {
-                    question.Answers = connection.Query<AnswerGetResponse>(
-                    @"EXEC dbo.Answer_Get_ByQuestionId @QuestionId", new { QuestionId = questionId });
+                    var question = results.Read<QuestionGetSingleResponse>().FirstOrDefault();
+                    if (question != null)
+                    {
+                        question.Answers = results.Read<AnswerGetResponse>().ToList();
+                    }
+
+                    return question;
                 }
-                
-                return question;
             }
         }
         
@@ -72,6 +103,24 @@ namespace QandA.Data
             }
         }
 
+        public IEnumerable<QuestionGetManyResponse> GetQuestionsBySearchWithPaging(
+            string search, int pageNumber, int pageSize)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                string sql = @"EXEC dbo.Question_GetMany_BySearch_WithPaging 
+                             @Search, @PageNumber, @PageSize";
+
+                return connection.Query<QuestionGetManyResponse>(sql, new 
+                {
+                    Search = search,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                });
+            }
+        }
+
         public IEnumerable<QuestionGetManyResponse> GetUnansweredQuestions()
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -79,6 +128,16 @@ namespace QandA.Data
                 connection.Open();
                 string sql = @"EXEC dbo.Question_GetUnanswered";
                 return connection.Query<QuestionGetManyResponse>(sql);
+            }
+        }
+
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestionsAsync()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                string sql = @"EXEC dbo.Question_GetUnanswered";
+                return await connection.QueryAsync<QuestionGetManyResponse>(sql);
             }
         }
 

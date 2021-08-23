@@ -14,36 +14,51 @@ namespace QandA.Controllers
     public class QuestionsController : ControllerBase
     {
         private readonly IDataRepository _dataRepository;
+        private readonly IQuestionCache _questionCache;
 
-        public QuestionsController(IDataRepository dataRepository)
+        public QuestionsController(IDataRepository dataRepository, IQuestionCache questionCache)
         {
             _dataRepository = dataRepository;
+            _questionCache = questionCache;
         }
 
         [HttpGet]
-        public IEnumerable<QuestionGetManyResponse> GetQuestions(string search)
+        public IEnumerable<QuestionGetManyResponse> GetQuestions(
+            string search, bool includeAnswers, int page = 1, int pageSize = 20)
         {
             if (string.IsNullOrEmpty(search))
             {
-                return _dataRepository.GetQuestions();
+                if (includeAnswers)
+                {
+                    return _dataRepository.GetQuestionsWithAnswers();
+                }
+                else
+                {
+                    return _dataRepository.GetQuestions();
+                }
             }
 
-            return _dataRepository.GetQuestionsBySearch(search);
+            return _dataRepository.GetQuestionsBySearchWithPaging(search, page, pageSize);
         }
 
         [HttpGet("unanswered")]
-        public IEnumerable<QuestionGetManyResponse> GetUnansweredQuestions()
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestions()
         {
-            return _dataRepository.GetUnansweredQuestions();
+            return await _dataRepository.GetUnansweredQuestionsAsync();
         }
 
         [HttpGet("{questionId}")]
         public ActionResult<QuestionGetSingleResponse> GetQuestion(int questionId)
         {
-            var question = _dataRepository.GetQuestion(questionId);
+            var question = _questionCache.Get(questionId);
             if (question == null)
             {
-                return NotFound();
+                question = _dataRepository.GetQuestion(questionId);
+                if (question == null)
+                {
+                    return NotFound();
+                }
+                _questionCache.Set(question);
             }
 
             return question;
@@ -83,7 +98,10 @@ namespace QandA.Controllers
             questionPutRequest.Content = string.IsNullOrEmpty(questionPutRequest.Content) ? question.Content
                 : questionPutRequest.Content;
 
-            return _dataRepository.PutQuestion(questionId, questionPutRequest);
+            var savedQuestion = _dataRepository.PutQuestion(questionId, questionPutRequest);
+            _questionCache.Remove(savedQuestion.QuestionId);
+
+            return savedQuestion;
         }
 
         [HttpDelete("{questionId}")]
@@ -96,6 +114,8 @@ namespace QandA.Controllers
             }
 
             _dataRepository.DeleteQuestion(questionId);
+            _questionCache.Remove(questionId);
+
             return NoContent();
         }
 
@@ -107,6 +127,8 @@ namespace QandA.Controllers
             {
                 return NotFound();
             }
+
+            _questionCache.Remove(answerPostRequest.QuestionId.Value);
 
             return _dataRepository.PostAnswer(
                 new AnswerPostFullRequest()
