@@ -71,11 +71,11 @@ namespace QandA.Data
             }
         }
 
-        public QuestionGetSingleResponse GetQuestion(int questionId)
+        public async Task<QuestionGetSingleResponse> GetQuestion(int questionId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 string sql = @"EXEC dbo.Question_GetSingle @QuestionId; 
                                EXEC dbo.Answer_Get_ByQuestionId @QuestionId";
 
@@ -151,7 +151,7 @@ namespace QandA.Data
             }
         }
 
-        public QuestionGetSingleResponse PostQuestion(QuestionPostFullRequest question)
+        public async Task<QuestionGetSingleResponse> PostQuestion(QuestionPostFullRequest question)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -159,11 +159,11 @@ namespace QandA.Data
                 string sql = @"EXEC dbo.Question_Post @Title, @Content, @UserId, @UserName, @Created";
                 var questionId = connection.QueryFirst<int>(sql, question);
 
-                return GetQuestion(questionId);
+                return await GetQuestion(questionId);
             }
         }
 
-        public QuestionGetSingleResponse PutQuestion(int questionId, QuestionPutRequest question)
+        public async Task<QuestionGetSingleResponse> PutQuestion(int questionId, QuestionPutRequest question)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -176,7 +176,7 @@ namespace QandA.Data
                     Content = question.Content
                 });
 
-                return GetQuestion(questionId);
+                return await GetQuestion(questionId);
             }
         }
 
