@@ -32,13 +32,13 @@ namespace QandA.Data
             }
         }
 
-        public IEnumerable<QuestionGetManyResponse> GetQuestions()
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestions()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 string sql = @"EXEC dbo.Question_GetMany";
-                return connection.Query<QuestionGetManyResponse>(sql);
+                return await connection.QueryAsync<QuestionGetManyResponse>(sql);
             }
         }
 
@@ -103,16 +103,16 @@ namespace QandA.Data
             }
         }
 
-        public IEnumerable<QuestionGetManyResponse> GetQuestionsBySearchWithPaging(
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearchWithPaging(
             string search, int pageNumber, int pageSize)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 string sql = @"EXEC dbo.Question_GetMany_BySearch_WithPaging 
                              @Search, @PageNumber, @PageSize";
 
-                return connection.Query<QuestionGetManyResponse>(sql, new 
+                return await connection.QueryAsync<QuestionGetManyResponse>(sql, new 
                 {
                     Search = search,
                     PageNumber = pageNumber,

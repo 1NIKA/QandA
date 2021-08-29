@@ -8,10 +8,10 @@ namespace QandA.Data
 {
     public interface IDataRepository
     {
-        IEnumerable<QuestionGetManyResponse> GetQuestions();
+        Task<IEnumerable<QuestionGetManyResponse>> GetQuestions();
         IEnumerable<QuestionGetManyResponse> GetQuestionsWithAnswers();
         IEnumerable<QuestionGetManyResponse> GetQuestionsBySearch(string search);
-        IEnumerable<QuestionGetManyResponse> GetQuestionsBySearchWithPaging(
+        Task<IEnumerable<QuestionGetManyResponse>> GetQuestionsBySearchWithPaging(
             string search, int pageNumber, int pageSize);
         IEnumerable<QuestionGetManyResponse> GetUnansweredQuestions();
         Task<IEnumerable<QuestionGetManyResponse>> GetUnansweredQuestionsAsync();

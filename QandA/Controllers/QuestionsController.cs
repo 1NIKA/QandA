@@ -33,7 +33,7 @@ namespace QandA.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<QuestionGetManyResponse> GetQuestions(
+        public async Task<IEnumerable<QuestionGetManyResponse>> GetQuestions(
             string search, bool includeAnswers, int page = 1, int pageSize = 20)
         {
             if (string.IsNullOrEmpty(search))
@@ -44,11 +44,11 @@ namespace QandA.Controllers
                 }
                 else
                 {
-                    return _dataRepository.GetQuestions();
+                    return await _dataRepository.GetQuestions();
                 }
             }
 
-            return _dataRepository.GetQuestionsBySearchWithPaging(search, page, pageSize);
+            return await _dataRepository.GetQuestionsBySearchWithPaging(search, page, pageSize);
         }
 
         [HttpGet("unanswered")]
